@@ -326,3 +326,40 @@ def delete_cart_item(
     return {
         "message": "Product removed from cart"
     }
+
+
+# ============================================================
+# CLEAR CART
+# ============================================================
+
+@router.delete("/")
+def clear_cart(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+
+    user_id = current_user["id"]
+
+    cart = (
+        db.query(Cart)
+        .filter(Cart.user_id == user_id)
+        .first()
+    )
+
+    if not cart:
+        return {
+            "message": "Cart is already empty"
+        }
+
+    # Delete all items but keep the cart itself
+    (
+        db.query(CartItem)
+        .filter(CartItem.cart_id == cart.id)
+        .delete(synchronize_session=False)
+    )
+
+    db.commit()
+
+    return {
+        "message": "Cart cleared successfully"
+    }

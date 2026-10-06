@@ -1,4 +1,4 @@
-name: Auth DEV CI
+name: Cart DEV CI
 
 on:
   push:
@@ -12,6 +12,10 @@ permissions:
 jobs:
   build-scan-push:
     runs-on: ubuntu-latest
+
+    outputs:
+      image_tag: ${{ steps.image-tag.outputs.short_sha }}
+
 
     steps:
 
@@ -43,9 +47,9 @@ jobs:
       # -----------------------------------
       # 4. Unit tests
       # -----------------------------------
-      # - name: Run unit tests
-      #   run: |
-      #     pytest -v
+      - name: Run unit tests
+        run: |
+          python -m pytest -v
 
 
       # -----------------------------------
@@ -60,6 +64,12 @@ jobs:
           exit-code: 1
           ignore-unfixed: true
 
+      - name: Set short Git SHA
+        id: image-tag
+        run: |
+          SHORT_SHA="${GITHUB_SHA::7}"
+          echo "SHORT_SHA=$SHORT_SHA" >> "$GITHUB_ENV"
+          echo "short_sha=$SHORT_SHA" >> "$GITHUB_OUTPUT"
 
       # -----------------------------------
       # 6. Build Docker image
@@ -67,7 +77,7 @@ jobs:
       - name: Build Docker image
         run: |
           docker build \
-            -t ${{ vars.ECR_REPOSITORY }}:${{ github.sha }} .
+            -t ${{ vars.ECR_REPOSITORY }}:$SHORT_SHA .
 
 
       # -----------------------------------
@@ -76,7 +86,7 @@ jobs:
       # - name: Trivy image vulnerability scan
       #   uses: aquasecurity/trivy-action@master
       #   with:
-      #     image-ref: ${{ vars.ECR_REPOSITORY }}:${{ github.sha }}
+      #     image-ref: ${{ vars.ECR_REPOSITORY }}:$SHORT_SHA
       #     severity: HIGH,CRITICAL
       #     exit-code: 1
       #     ignore-unfixed: true
@@ -106,8 +116,8 @@ jobs:
       - name: Tag Docker image
         run: |
           docker tag \
-            ${{ vars.ECR_REPOSITORY }}:${{ github.sha }} \
-            ${{ steps.login-ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}:${{ github.sha }}
+            ${{ vars.ECR_REPOSITORY }}:$SHORT_SHA \
+            ${{ steps.login-ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}:$SHORT_SHA
 
 
       # -----------------------------------
@@ -116,4 +126,12 @@ jobs:
       - name: Push Docker image
         run: |
           docker push \
-            ${{ steps.login-ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}:${{ github.sha }}
+            ${{ steps.login-ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}:$SHORT_SHA
+
+  # deploy-dev:
+  #   name: Trigger DEV Deployment
+  #   needs: build-scan-push
+  #   uses: ./.github/workflows/dev-cd.yml
+  #   with:
+  #     image_tag: ${{ needs.build-scan-push.outputs.image_tag }}
+  #   secrets: inherit

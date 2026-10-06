@@ -8,7 +8,7 @@ from app.models.cart import Cart, CartItem
 from app.routers.cart import router as cart_router
 
 
-Base.metadata.create_all(bind=engine)
+# Base.metadata.create_all(bind=engine)
 
 
 app = FastAPI(

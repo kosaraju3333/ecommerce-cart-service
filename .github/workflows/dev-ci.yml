@@ -128,10 +128,10 @@ jobs:
           docker push \
             ${{ steps.login-ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}:$SHORT_SHA
 
-  # deploy-dev:
-  #   name: Trigger DEV Deployment
-  #   needs: build-scan-push
-  #   uses: ./.github/workflows/dev-cd.yml
-  #   with:
-  #     image_tag: ${{ needs.build-scan-push.outputs.image_tag }}
-  #   secrets: inherit
+  deploy-dev:
+    name: Trigger DEV Deployment
+    needs: build-scan-push
+    uses: ./.github/workflows/dev-cd.yml
+    with:
+      image_tag: ${{ needs.build-scan-push.outputs.image_tag }}
+    secrets: inherit

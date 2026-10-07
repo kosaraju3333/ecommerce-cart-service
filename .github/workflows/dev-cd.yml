@@ -40,6 +40,12 @@ jobs:
               \"chmod 600 /opt/ecommerce/cart/cart.env\",
               \"aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 828048069567.dkr.ecr.us-east-1.amazonaws.com\",
               \"docker pull 828048069567.dkr.ecr.us-east-1.amazonaws.com/ecommerce-cart:${IMAGE_TAG}\",
+
+              \"echo '=== Running Cart database migrations ==='\",
+              \"docker run --rm --env-file /opt/ecommerce/cart/cart.env 828048069567.dkr.ecr.us-east-1.amazonaws.com/ecommerce-cart:${IMAGE_TAG} alembic upgrade head\",
+              \"echo '=== Cart database migrations successful ==='\",
+
+
               \"docker stop ecommerce-cart || true\",
               \"docker rm ecommerce-cart || true\",
               \"docker run -d --name ecommerce-cart --restart unless-stopped --env-file /opt/ecommerce/cart/cart.env -p 8003:8003 828048069567.dkr.ecr.us-east-1.amazonaws.com/ecommerce-cart:${IMAGE_TAG}\",

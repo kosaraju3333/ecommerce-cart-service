@@ -48,7 +48,7 @@ jobs:
 
               \"docker stop ecommerce-cart || true\",
               \"docker rm ecommerce-cart || true\",
-              \"docker run -d --name ecommerce-cart --restart unless-stopped --env-file /opt/ecommerce/cart/cart.env -p 8003:8003 828048069567.dkr.ecr.us-east-1.amazonaws.com/ecommerce-cart:${IMAGE_TAG}\",
+              \"docker run -d --name ecommerce-cart --network ecommerce-network --restart unless-stopped --env-file /opt/ecommerce/cart/cart.env -p 8003:8003 828048069567.dkr.ecr.us-east-1.amazonaws.com/ecommerce-cart:${IMAGE_TAG}\",
               \"sleep 5\",
               \"curl --fail http://localhost:8003/health\",
               \"echo '=== Cart deployment successful ==='\",

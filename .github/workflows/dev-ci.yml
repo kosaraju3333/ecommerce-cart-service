@@ -135,3 +135,28 @@ jobs:
     with:
       image_tag: ${{ needs.build-scan-push.outputs.image_tag }}
     secrets: inherit
+
+  integration-tests-dev:
+    name: Trigger DEV Integration Tests
+    needs: deploy-dev
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.INTEGRATION_APP_ID }}
+          private-key: ${{ secrets.INTEGRATION_APP_PRIVATE_KEY }}
+          owner: kosaraju3333
+          repositories: ecommerce-integration-tests
+
+      - name: Trigger integration tests
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          gh workflow run dev-integration-tests.yml \
+            --repo kosaraju3333/ecommerce-integration-tests \
+            --ref develop
+
+          echo "DEV integration tests triggered successfully"

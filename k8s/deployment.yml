@@ -1,0 +1,132 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ecommerce-cart
+  namespace: ecommerce-cart
+  labels:
+    app: ecommerce-cart
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ecommerce-cart
+  template:
+    metadata:
+      labels:
+        app: ecommerce-cart
+    spec:
+      serviceAccountName: cart-service-account
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        ### Prevents the container from starting as root
+        runAsNonRoot: true
+        ### Runs the process using your existing appuser UID
+        runAsUser: 999
+        ### Uses your existing appgroup GID
+        runAsGroup: 999
+
+      containers:
+        - name: ecommerce-cart
+          image: 828048069567.dkr.ecr.us-east-1.amazonaws.com/ecommerce-cart-prod:v1
+          imagePullPolicy: IfNotPresent
+
+          ports:
+            - name: http
+              containerPort: 8003
+
+          securityContext:
+            ### Prevents processes from gaining additional privileges through mechanisms such as setuid
+            allowPrivilegeEscalation: false
+            ### Removes Linux capabilities that the application normally doesn't need
+            capabilities:
+              drop:
+                - ALL
+            ### Applies the container runtime's default system-call restrictions
+            seccompProfile:
+              type: RuntimeDefault
+
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: ecommerce-cart-credentials
+                  key: DATABASE_URL
+
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: ecommerce-cart-credentials
+                  key: SECRET_KEY
+
+            - name: ALGORITHM
+              valueFrom:
+                secretKeyRef:
+                  name: ecommerce-cart-credentials
+                  key: ALGORITHM
+
+            - name: PRODUCT_SERVICE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: ecommerce-cart-credentials
+                  key: PRODUCT_SERVICE_URL
+
+            - name: FRONTEND_URL
+              valueFrom:
+                secretKeyRef:
+                  name: ecommerce-cart-credentials
+                  key: FRONTEND_URL
+
+
+          volumeMounts:
+            - name: cart-secrets
+              mountPath: /mnt/secrets-store
+              readOnly: true
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8003
+            initialDelaySeconds: 10
+            periodSeconds: 10
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8003
+            initialDelaySeconds: 30
+            periodSeconds: 20
+
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+
+      topologySpreadConstraints:
+        # Spread cart Pods across Availability Zones
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app: ecommerce-cart
+
+        # Spread cart Pods across worker nodes
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app: ecommerce-cart
+
+
+
+      volumes:
+        - name: cart-secrets
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: ecommerce-cart-secrets

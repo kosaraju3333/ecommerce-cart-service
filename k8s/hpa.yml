@@ -1,0 +1,65 @@
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: ecommerce-cart-hpa
+  namespace: ecommerce-cart
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ecommerce-cart
+
+  minReplicas: 4
+  maxReplicas: 10
+
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+
+  behavior:
+    scaleUp:
+      ### HPA can immediately act on the recommendation to increase replicas
+      stabilizationWindowSeconds: 0
+      policies:
+        ### add up to 2 Pods within a 60-second window
+        - type: Pods
+          value: 2
+          periodSeconds: 60
+        ### It can double the replica count within a 60-second window
+        - type: Percent
+          value: 100
+          periodSeconds: 60
+      ### Kubernetes chooses whichever policy allows the larger increase.
+      selectPolicy: Max
+
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 60
+
+
+######### Default Behavour of HAP
+# scaleUp:
+#   stabilizationWindowSeconds: 0
+#   policies:
+#     - type: Pods
+#       value: 4
+#       periodSeconds: 15
+#     - type: Percent
+#       value: 100
+#       periodSeconds: 15
+#   selectPolicy: Max
+
+#   scaleDown:
+#     stabilizationWindowSeconds: 300
+#     policies:
+#       - type: Percent
+#         value: 100
+#         periodSeconds: 15
+#     selectPolicy: Max
